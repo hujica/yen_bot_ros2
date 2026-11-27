@@ -13,6 +13,7 @@ def generate_launch_description():
         Node(
             package='yen_bot',
             executable='hardware_node',
+            parameters=[{'port': 'mock'}],
             name='yen_bot_hardware',
             output='screen',
         ),

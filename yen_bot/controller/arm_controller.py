@@ -160,7 +160,22 @@ class ArmController:
         self.mode = plan.mode
         self.joint_targets = plan.targets
 
-        self._apply(q + plan.step, plan.step / dt)
+        next_q = q + plan.step
+        next_violations = self.kinematics.workspace_violations(next_q)
+        if next_violations and not self.kinematics.workspace_violations(q):
+            self.cart_cmd[:] = 0.0
+            self.joint_targets = list(self.current_joint_angles)
+            self.current_joint_velocities = [0.0] * 4
+            self.current_tip_velocity = [0.0] * 3
+            self.mode = "IDLE"
+            self.workspace_alarm = next_violations
+            self.status, self.status_level = self.safety.status(
+                self.mode, True, self.sim_mode,
+                self.kinematics.within_limits(self.current_joint_angles),
+                " / ".join(self.workspace_alarm), not self.torque_on)
+            return
+
+        self._apply(next_q, plan.step / dt)
         if not self.estopped:                # _apply may auto E-stop (servo comm lost)
             self._refresh_status(plan.blocked)
 
